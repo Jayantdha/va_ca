@@ -1,0 +1,21 @@
+# Render blueprint. Run exactly ONE instance (rate limits live in memory, SQLite is one file).
+services:
+  - type: web
+    name: va-ca-api
+    runtime: docker
+    plan: starter            # a persistent disk needs a paid plan
+    numInstances: 1
+    healthCheckPath: /health
+    disk: { name: data, mountPath: /data, sizeGB: 1 }
+    envVars:
+      - { key: SECRET, generateValue: true }
+      - { key: ORIGINS, sync: false }              # website origin, e.g. https://va-ca.vercel.app
+      - { key: DATABASE_URL, sync: false }         # managed Postgres connection string for beta
+      - { key: REDIS_URL, sync: false }             # shared rate-limit/cache state for multi-instance deployments
+      - { key: MSG91_AUTH_KEY, sync: false }
+      - { key: MSG91_TEMPLATE_ID, sync: false }
+      - { key: TURNSTILE_SECRET, sync: false }
+      - { key: RAZORPAY_KEY_ID, sync: false }
+      - { key: RAZORPAY_KEY_SECRET, sync: false }
+      - { key: RAZORPAY_WEBHOOK_SECRET, sync: false }
+      - { key: WEBHOOK_SECRET, sync: false }       # compatibility alias if needed by older setups

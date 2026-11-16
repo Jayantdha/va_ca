@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>va_ca — a verified matching app, built and secured</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,500&display=swap">
+<style>
+:root{--bg:#F5EBDC;--s:#FBF5EA;--r:#EBDDC6;--bd:#DCCAB0;--t:#3B2416;--m:#6B5846;--p:#4A2E1D;--like:#C4283C}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t);font:400 17px/1.55 'DM Sans',sans-serif}
+.w{max-width:880px;margin:0 auto;padding:48px 20px 80px}
+h1,h2{font-family:Fraunces,serif;font-weight:500;letter-spacing:-.01em;margin:0}
+h1{font-size:clamp(40px,8vw,64px);line-height:1.05}h2{font-size:30px;margin:56px 0 16px}
+.chip{display:inline-block;padding:4px 12px;border:1.5px solid var(--bd);border-radius:14px;font-size:13px;font-weight:700;color:var(--m)}
+.lead{font-size:20px;color:var(--m);max-width:640px;margin:18px 0 28px}
+.btn{display:inline-block;min-height:48px;line-height:48px;padding:0 24px;border-radius:24px;background:var(--p);color:var(--s);font-weight:700;text-decoration:none;margin:0 8px 8px 0}
+.btn.g{background:none;color:var(--t);border:1.5px solid var(--bd);line-height:45px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.card{background:var(--s);border:1px solid var(--bd);border-radius:20px;padding:20px}
+.card b{display:block;font-family:Fraunces,serif;font-size:20px;font-weight:500;margin-bottom:6px}
+.num{font-family:Fraunces,serif;font-size:44px;line-height:1;color:var(--p)}
+.shots{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px}
+.shot{flex:none;width:200px;height:420px;border-radius:24px;background:var(--r);border:1.5px dashed var(--bd);display:flex;align-items:center;justify-content:center;text-align:center;color:var(--m);font-size:14px;padding:12px}
+a{color:var(--p)}footer{margin-top:64px;color:var(--m);font-size:14px}
+</style>
+</head>
+<body><div class="w">
+<span class="chip">Portfolio project · prototype · not live</span>
+<h1 style="margin-top:14px">va_ca</h1>
+<p class="lead">A matching app for verified businesses and influencers, where the interesting part is not the screens but making every rule impossible to cheat.</p>
+<a class="btn" href="https://claude.ai/artifact/TELhmJfrrGvDp3GACsJ6dd">Try the demo</a>
+<!-- TODO: put your real repository link below -->
+<a class="btn g" href="https://github.com/YOUR-USERNAME/va-ca">View the code</a>
+<a class="btn g" href="https://github.com/YOUR-USERNAME/va-ca/blob/main/docs/CASE_STUDY.md">Read the case study</a>
+
+<h2>How it works</h2>
+<div class="grid">
+<div class="card"><b>1. Verified</b>Businesses sign up with a mobile OTP and GSTIN. An admin approves them.</div>
+<div class="card"><b>2. Like</b>Businesses like influencers. Influencers see nothing yet.</div>
+<div class="card"><b>3. Pay, then wait</b>An influencer pays once. The server starts a 7-day timer.</div>
+<div class="card"><b>4. Reveal and chat</b>After 7 days likes are revealed. A like back opens a chat.</div>
+</div>
+
+<h2>Screens</h2>
+<!-- TODO: replace each box with <img src="../docs/screens/0X-name.png" alt="..." class="shot"> after you add screenshots -->
+<div class="shots"><div class="shot">Discover</div><div class="shot">Chat</div><div class="shot">Payment</div><div class="shot">Reveal</div></div>
+
+<h2>The real work: security</h2>
+<div class="grid">
+<div class="card"><div class="num">10</div>attack ideas listed, each fixed on the server</div>
+<div class="card"><div class="num">18</div>automated security tests</div>
+<div class="card"><div class="num">14</div>step end-to-end test with two users</div>
+</div>
+<div class="grid" style="margin-top:14px">
+<div class="card"><b>Payments</b>Only a signed webhook can mark "paid". Screenshots and app edits count for nothing.</div>
+<div class="card"><b>The 7-day hold</b>Server clock only. Before the date, the API returns no likes, not even a count.</div>
+<div class="card"><b>Privacy</b>Every chat, photo and payment is checked per user. Consent, export and delete are built in.</div>
+<div class="card"><b>Accounts</b>15-minute tokens, rotating refresh tokens, stolen-token detection, log out everywhere.</div>
+</div>
+
+<h2>Honest limits</h2>
+<p>Built with AI assistance (Claude). The SMS, CAPTCHA and payment adapters are written to the providers' documented formats but have not been tested against the live services. There are no real users or payments. It has not had an independent security review.</p>
+
+<h2>Stack</h2>
+<p><span class="chip">Node 22</span> <span class="chip">Express</span> <span class="chip">SQLite</span> <span class="chip">sharp</span> <span class="chip">HTML / CSS / JS</span> <span class="chip">GitHub Actions</span></p>
+<footer>© YOUR NAME · replace the placeholders marked TODO before sharing</footer>
+</div></body></html>
