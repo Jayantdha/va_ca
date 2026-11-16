@@ -1,6 +1,7 @@
 'use strict';
 const {test,after}=require('node:test'),assert=require('node:assert/strict'),crypto=require('crypto'),fs=require('fs'),os=require('os'),path=require('path'),sharp=require('sharp');
 const {createApp,CONSENT_V}=require('./server'),AD=require('./adapters');
+const {pgPlaceholders}=require('./database'),{supabaseStorage}=require('./storage');
 const T={t:1_800_000_000_000},WH='r'.repeat(20),servers=[];after(()=>servers.forEach(s=>s.close()));
 const boot=async(extra={})=>{const S=createApp({secret:'s'.repeat(40),webhookSecret:WH,now:()=>T.t,uploadDir:fs.mkdtempSync(path.join(os.tmpdir(),'v2-')),...extra});const srv=await new Promise(r=>{const x=S.app.listen(0,()=>r(x))});servers.push(srv);
  const base='http://127.0.0.1:'+srv.address().port;let n=0;
@@ -52,3 +53,12 @@ test('endpoints the app needs: likes sent, chats with names',async()=>{const {ca
  assert.equal((await call('GET','/likes/sent',{tok:biz.access})).j[0].matched,1);
  assert.equal((await call('GET','/chats',{tok:biz.access})).j[0].with_name,'Aanya');assert.equal((await call('GET','/chats',{tok:inf.access})).j[0].with_name,'Rohan');
  assert.equal((await call('GET','/likes/sent',{tok:inf.access})).s,403)});
+test('Postgres placeholder conversion',()=>{assert.equal(pgPlaceholders('select * from users where phone=? and role=?'),'select * from users where phone=$1 and role=$2')});
+test('Supabase Storage keeps photos private and reports failures',async()=>{
+ const calls=[],body=Buffer.from('webp'),store=supabaseStorage({url:'https://demo.supabase.co/',serviceKey:'server-only',bucket:'private photos',fetchFn:async(url,options)=>{calls.push({url,options});return{ok:true,status:200,arrayBuffer:async()=>body.buffer.slice(body.byteOffset,body.byteOffset+body.byteLength)}}});
+ await store.put('folder/id.webp',body);assert.match(calls[0].url,/\/storage\/v1\/object\/private%20photos\/folder\/id\.webp$/);assert.equal(calls[0].options.method,'PUT');assert.equal(calls[0].options.headers.Authorization,'Bearer server-only');
+ assert.deepEqual(await store.get('folder/id.webp'),body);assert.match(calls[1].url,/\/storage\/v1\/object\/authenticated\/private%20photos\/folder\/id\.webp$/);
+ await store.delete('folder/id.webp');assert.equal(calls[2].options.method,'DELETE');assert.deepEqual(JSON.parse(calls[2].options.body),{prefixes:['folder/id.webp']});
+ const broken=supabaseStorage({url:'https://demo.supabase.co',serviceKey:'key',bucket:'photos',fetchFn:async()=>({ok:false,status:503})});
+ await assert.rejects(broken.put('id.webp',body),/upload failed \(503\)/)
+});

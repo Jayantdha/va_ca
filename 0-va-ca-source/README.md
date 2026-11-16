@@ -24,13 +24,13 @@
 ```mermaid
 flowchart LR
   W[Website<br/>static HTML + JS] -->|HTTPS, Bearer token| A[Node + Express API]
-  A --> D[(SQLite)]
-  A --> P[Photo files<br/>re-encoded WebP]
+  A --> D[(SQLite local / Supabase Postgres hosted)]
+  A --> P[Local photo files / private Supabase Storage]
   A -.OTP SMS.-> M[MSG91]
   A -.CAPTCHA check.-> T[Cloudflare Turnstile]
   R[Razorpay] -- signed webhook --> A
 ```
-Stack: Node 22, Express, built-in SQLite, sharp, plain HTML/CSS/JS (no framework) for the website. Two modes: **demo** (no backend, everything simulated) and **live** (talks to the API).
+Stack: Node 22, Express, SQLite for local tests, optional Supabase Postgres and private Storage for hosting, sharp, and plain HTML/CSS/JS for the website. Two modes: **demo** (no backend, everything simulated) and **live** (talks to the API).
 
 ## Security work (the main point of this project)
 | Risk | What the server does | Test |
@@ -51,7 +51,7 @@ Details and one real bug the end-to-end test caught: [docs/CASE_STUDY.md](docs/C
 ## Run it
 ```bash
 npm install
-npm test          # 18 security tests (API, adapters, hooks)
+npm test          # 20 security tests (API, adapters, storage)
 npm run e2e       # 14-step journey: real website <-> real API, two users
 # dev server (OTP is printed in the terminal, no SMS is sent):
 SECRET="$(openssl rand -hex 24)" WEBHOOK_SECRET="$(openssl rand -hex 12)" node index.js
@@ -61,26 +61,13 @@ Open `frontend/index.html` for demo mode. For live mode build the site with `nod
 ## Production-ready hosting path
 This prototype is already working locally, and the fastest next step is to move it into a hosted stack without breaking the demo flow.
 
-### Option A: Render + Postgres + Redis
-1. Start local services:
-   ```bash
-   npm run db:up
-   ```
-2. Set your environment variables from `.env.example` and point `DATABASE_URL` to the Postgres container.
-3. Deploy the API to Render (or Fly/Railway) using the existing `render.yaml` and `Dockerfile`.
-4. Host the frontend on Vercel and set the `ORIGINS` env var to the exact website origin.
+### Supabase + Render Free hosting
+The API can use Supabase Postgres and a private Supabase Storage bucket for hosted data and photos. Render Free runs the Node API from the root `Dockerfile`, but sleeps when idle and has an ephemeral filesystem; persistent app data therefore stays in Supabase. Set the required variables from `.env.example` in Render and use the Supabase Session Pooler connection string.
 
-Recommended startup values:
-- `DATABASE_URL=postgres://va_ca:va_ca@localhost:5432/va_ca`
-- `REDIS_URL=redis://localhost:6379`
-
-### Option B: Supabase/Postgres for beta
-- Use Supabase or a managed Postgres instance for the user, payment, and chat data.
-- Keep the current SQLite flow for local development and tests.
-- Move rate-limit state to Redis before running more than one API instance.
+Supabase Free currently includes 500 MB of database and 1 GB of file storage, and can pause projects after a week of inactivity. Render Free can take about a minute to wake after sleeping. These limits make this suitable for a demo, not a production launch. Keep `frontend/index.html` in demo mode; build and host a separate live frontend only after the API and provider tests pass.
 
 ## Not built yet
-Photo sharing inside chat, block/report buttons in the website (the API has them), email / Google / Apple login, password reset, refunds, notifications. Rate limits are in memory and SQLite is one file, so run a single server. Moving to Redis + Postgres is the scaling step.
+Photo sharing inside chat, block/report buttons in the website (the API has them), email / Google / Apple login, password reset, refunds, notifications. Rate limits are in memory, so run a single API instance. Supporting multiple replicas requires implementing shared rate limits.
 
 ## Disclaimer
 Charging influencers to see likes, handling money between users, and storing personal data all have legal rules (payment-aggregator rules, DPDP Act consent). Get advice from a lawyer or CA before launching for real. No license is attached yet; choose one before making the repo public.
