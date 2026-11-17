@@ -9,28 +9,27 @@ Folder map: `server.js` (API), `database.js` (SQLite/Postgres adapter), `storage
 like, payment, 7-day reveal, like-back, chat, logout).
 
 ## Go live: do these in order (each needs YOUR account, I cannot create them)
-1. **Razorpay** (razorpay.com): create an account, stay in TEST mode first. Copy Key Id + Key Secret. Later add a Webhook:
-   URL `https://<your-api>/webhooks/payment`, events `payment.captured` and `payment.failed`, and a secret you choose (16+ characters).
-2. **MSG91** (msg91.com): create an account, finish DLT registration, get an OTP template approved, copy the Authkey and Template ID.
+1. **MSG91** (msg91.com): create an account, finish DLT registration, get an OTP template approved, copy the Authkey and Template ID.
    (Check the variable name in your template; default is `OTP`, change with `MSG91_VAR`.)
-3. **Cloudflare Turnstile** (free): create a widget, copy the Site key (for the website) and Secret key (for the API).
-4. **Create a Supabase project** on the Free plan. Create a private Storage bucket named `va-ca-photos`, then copy the project URL,
+2. **Cloudflare Turnstile** (free): create a widget, copy the Site key (for the website) and Secret key (for the API).
+3. **Create a Supabase project** on the Free plan. Create a private Storage bucket named `va-ca-photos`, then copy the project URL,
    server-only service role key, and Postgres **Session Pooler** connection string (IPv4) into the matching Render variables.
    The production API initializes its schema from `scripts/postgres-init.sql`. Keep the service role key on the server only.
-5. **Deploy the API to Render Free** from the repository using the root `Dockerfile` or `render.yaml`. Set `ORIGINS` to the exact
-   website origin, then add all remaining production variables from `.env.example`. The API refuses to start without
-   `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`, `MSG91_AUTH_KEY`,
-   `MSG91_TEMPLATE_ID`, `TURNSTILE_SECRET`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, and `ORIGINS`.
-   Start with Razorpay TEST keys. Render Free sleeps after inactivity; its local filesystem is ephemeral, so the API stores photos
-   in Supabase Storage and all persistent records in Supabase Postgres. Supabase Free has limited database/storage quotas and can pause
-   projects after a week without activity.
-6. **Build the website**: in `frontend/` run
-   `node build.js --api https://<your-api> --turnstile <SITE_KEY> --razorpay`
-   then upload the `dist` folder (index.html + vercel.json) to Vercel/Netlify.
+4. **Deploy the API to Render Free** from the repository using the root `Dockerfile` or `render.yaml`. Set `ORIGINS` to the exact
+   website origin, then add all remaining production variables from `.env.example`. By default, production payments are disabled;
+   the API refuses to start without `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`,
+   `MSG91_AUTH_KEY`, `MSG91_TEMPLATE_ID`, `TURNSTILE_SECRET`, and `ORIGINS`. OTP/live authentication remains unavailable until MSG91
+   is configured. Render Free sleeps after inactivity; its local filesystem is ephemeral, so the API stores photos in Supabase Storage
+   and all persistent records in Supabase Postgres. Supabase Free has limited database/storage quotas and can pause projects after a week without activity.
+5. **Build the website**: in `frontend/` run
+   `node build.js --api https://<your-api> --turnstile <SITE_KEY>`
+   then upload the `dist` folder (index.html + vercel.json) to Vercel/Netlify. This omits the payment checkout; the paid Reveal Week stays unavailable.
+6. **Optional payments later**: add Razorpay TEST credentials and a `RAZORPAY_WEBHOOK_SECRET` (16+ characters) to Render, then set
+   `ENABLE_PAYMENTS=true`. Add a Razorpay webhook at `https://<your-api>/webhooks/payment` for `payment.captured` and `payment.failed`;
+   use the same webhook secret in both places. Rebuild the website with `--razorpay`.
 7. **First admin**: open the website, sign up normally, then run `node admin.js make-admin <your-mobile-number>` locally with the same `DATABASE_URL` set.
 8. **Daily admin work**: run `node admin.js pending` locally with the same `DATABASE_URL`; then `approve <id>` or `reject <id>`, `photos` then `approve-photo <id>`, or `reports`.
-9. Open the browser console on the live site once and check for "Content Security Policy" errors (the payment and CAPTCHA pop-ups
-   need their own addresses allowed; `build.js` adds the ones I know of).
+9. Open the browser console on the live site once and check for "Content Security Policy" errors (the CAPTCHA needs its own addresses allowed; `build.js` adds the ones it knows).
 
 ### Production database note
 Tests and local development continue to use SQLite by default. When `DATABASE_URL` is set, the API uses Supabase Postgres; when the

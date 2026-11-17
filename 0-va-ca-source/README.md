@@ -62,7 +62,7 @@ Open `frontend/index.html` for demo mode. For live mode build the site with `nod
 This prototype is already working locally, and the fastest next step is to move it into a hosted stack without breaking the demo flow.
 
 ### Supabase + Render Free hosting
-The API can use Supabase Postgres and a private Supabase Storage bucket for hosted data and photos. Render Free runs the Node API from the root `Dockerfile`, but sleeps when idle and has an ephemeral filesystem; persistent app data therefore stays in Supabase. Set the required variables from `.env.example` in Render and use the Supabase Session Pooler connection string.
+The API can use Supabase Postgres and a private Supabase Storage bucket for hosted data and photos. Render Free runs the Node API from the root `Dockerfile`, but sleeps when idle and has an ephemeral filesystem; persistent app data therefore stays in Supabase. Set the required variables from `.env.example` in Render and use the Supabase Session Pooler connection string. Production payments are opt-in (`ENABLE_PAYMENTS=true` plus Razorpay credentials); leave them disabled to deploy without checkout. MSG91 and Turnstile are still required for live OTP authentication.
 
 Supabase Free currently includes 500 MB of database and 1 GB of file storage, and can pause projects after a week of inactivity. Render Free can take about a minute to wake after sleeping. These limits make this suitable for a demo, not a production launch. Keep `frontend/index.html` in demo mode; build and host a separate live frontend only after the API and provider tests pass.
 

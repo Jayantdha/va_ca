@@ -295,7 +295,7 @@ async function loadMe(){var r=await api('GET','/me');if(r.s!==200)return;ME=r.j;
  var lr=await api('GET','/me/likes-received');if(lr.s===200){if(lr.j.locked){LOCK={date:lr.j.reveal_at?new Date(lr.j.reveal_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):null};LK=[]}else{LOCK=null;LK=lr.j.items;li=0}showLike()}
  loadGrid()}
 function showLike(){var c=el('me').querySelector('.card'),t=c.querySelector('div[style*="font-weight:700"]'),s=c.querySelector('.mu'),b=c.querySelectorAll('button');
- if(LOCK){c.style.display='';t.textContent=LOCK.date?'Your likes unlock on '+LOCK.date:'Likes are waiting for you';s.textContent=LOCK.date?'Reveal Week is running':'Pay to start your 7-day Reveal Week';b[0].style.display='none';btxt(b[1],LOCK.date?'Not yet':'Pay now');b[1].disabled=!!LOCK.date;b[1].onclick=function(){go('pay')};return}
+ if(LOCK){c.style.display='';t.textContent=LOCK.date?'Your likes unlock on '+LOCK.date:'Likes are waiting for you';s.textContent=LOCK.date?'Reveal Week is running':(window.VA_RZP?'Pay to start your 7-day Reveal Week':'Reveal Week is unavailable while payments are disabled');b[0].style.display='none';btxt(b[1],LOCK.date?'Not yet':(window.VA_RZP?'Pay now':'Unavailable'));b[1].disabled=!!LOCK.date||!window.VA_RZP;b[1].onclick=function(){if(window.VA_RZP)go('pay')};return}
  b[0].style.display='';b[1].disabled=false;btxt(b[1],'Like back');if(!LK[li]){c.style.display='none';return}c.style.display='';t.textContent=(LK[li].name||'A business')+' liked you';s.textContent=LK[li].bio||'Business';b[0].onclick=function(){li++;showLike()};b[1].onclick=likeBack}
 async function likeBack(){var p=LK[li];if(!p)return;var r=await api('POST','/likes/back',{to:p.id});if(r.s===200){want=r.j.chat_id;toast('It’s a match');go('ichat')}else toast(r.j.error||'Could not like back')}
 var grid=document.querySelector('#me [style*="grid-template-columns:1fr 1fr 1fr"]'),addb=grid.querySelector('button');
@@ -322,9 +322,9 @@ el('mine').querySelector('div[style*="gap:16px"]').style.cssText+=';overflow-y:a
 // ---- payment
 function loadRzp(){if(!window.VA_RZP||window.Razorpay||document.getElementById('rzp'))return;var s=document.createElement('script');s.id='rzp';s.src='https://checkout.razorpay.com/v1/checkout.js';document.head.appendChild(s)}
 mk.remove();el('a').readOnly=true;el('a').placeholder='Shown at checkout';
-async function payInit(){loadRzp();var r=await api('GET','/me');if(r.s===200){ME=r.j;setPay(ME.reveal_at?2:0)}}
+async function payInit(){if(!window.VA_RZP){pb.disabled=true;pb.textContent='Payments are disabled';return}loadRzp();var r=await api('GET','/me');if(r.s===200){ME=r.j;setPay(ME.reveal_at?2:0)}}
 function poll(){clearInterval(pp);var n=0;pp=setInterval(async function(){var r=await api('GET','/payments/'+ORD.order_id+'/status');if(r.j&&r.j.status==='paid'){clearInterval(pp);setPay(2);var m=await api('GET','/me');if(m.s===200)ME=m.j}else if(++n>100)clearInterval(pp)},3000)}
-pb.onclick=async function(){var r=await api('POST','/payments/order');if(r.s!==201){toast(r.j.error||'Could not start payment');return}ORD=r.j;el('a').value=String(r.j.amount_paise/100);
+pb.onclick=async function(){if(!window.VA_RZP)return;var r=await api('POST','/payments/order');if(r.s!==201){toast(r.j.error||'Could not start payment');return}ORD=r.j;el('a').value=String(r.j.amount_paise/100);
  if(window.Razorpay&&r.j.checkout&&r.j.checkout.key_id){new window.Razorpay({key:r.j.checkout.key_id,order_id:r.j.order_id,amount:r.j.amount_paise,currency:'INR',name:'va_ca',handler:function(){setPay(1);poll()}}).open()}else{setPay(1);poll()}};
 // ---- screen entry + session restore
 var _g=go;go=function(id){_g(id);var a=document.querySelector('.screen.on');if(!a)return;var k=a.id;clearInterval(pt);if(!acc||k==='auth')return;

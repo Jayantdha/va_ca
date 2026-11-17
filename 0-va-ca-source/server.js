@@ -13,10 +13,10 @@ const checkPw=(p,st)=>{const [s,h]=String(st||'0:0').split(':');return eq(crypto
 const imgKind=b=>b.length>12&&(b[0]===255&&b[1]===216&&b[2]===255?'jpeg':b.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))?'png':(b.subarray(0,4).toString()==='RIFF'&&b.subarray(8,12).toString()==='WEBP')?'webp':null);
 const CTRL=/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g,LINK=/https?:\/\/|www\.|\b[a-z0-9-]+\.(com|in|co|me|ly|xyz|link)\b/i;
 function createApp(o){
- o=Object.assign({now:Date.now,dbPath:':memory:',databaseUrl:'',origins:[],pricePaise:49900,captchaRequired:false,captcha:async()=>false,sms:async()=>{},uploadDir:require('node:path').join(__dirname,'uploads'),trustProxy:false},o);
- if(!o.secret||o.secret.length<32||!o.webhookSecret||o.webhookSecret.length<16)throw new Error('secret (32+) and webhookSecret (16+) required');
+ o=Object.assign({now:Date.now,dbPath:':memory:',databaseUrl:'',origins:[],pricePaise:49900,paymentsEnabled:true,captchaRequired:false,captcha:async()=>false,sms:async()=>{},uploadDir:require('node:path').join(__dirname,'uploads'),trustProxy:false},o);
+ if(!o.secret||o.secret.length<32||(o.paymentsEnabled&&(!o.webhookSecret||o.webhookSecret.length<16)))throw new Error('secret (32+) and, when payments are enabled, webhookSecret (16+) required');
  const now=o.now,store=createDatabase({databaseUrl:o.databaseUrl,dbPath:o.dbPath}),storage=o.storage||localStorage(o.uploadDir);
- const gw=o.gateway||{name:'generic',verify:(raw,h)=>eq(h['x-signature']||'',hmac(o.webhookSecret,raw)),parse:e=>{if(typeof e.created_at!=='number')throw new Error('no time');return e},createOrder:async()=>({order_id:'order_'+crypto.randomBytes(9).toString('hex')}),checkout:()=>({})};
+ const gw=o.paymentsEnabled?(o.gateway||{name:'generic',verify:(raw,h)=>eq(h['x-signature']||'',hmac(o.webhookSecret,raw)),parse:e=>{if(typeof e.created_at!=='number')throw new Error('no time');return e},createOrder:async()=>({order_id:'order_'+crypto.randomBytes(9).toString('hex')}),checkout:()=>({})}):null;
  const {db,get,all,run,ready,close}=store;
  const buckets=new Map();const rl=(k,max,win)=>{const t=now(),a=(buckets.get(k)||[]).filter(x=>t-x<win);if(a.length>=max){buckets.set(k,a);return false}a.push(t);buckets.set(k,a);return true};
  function newSession(uid,device){const a=tok(),r=tok(),session={access:a,refresh:r,expires_in:900};
@@ -34,6 +34,7 @@ function createApp(o){
  const ok=u=>u.verif==='approved';
  // ---- 1. payment webhook: the ONLY place a payment becomes "paid" (raw body, signed)
  app.post('/webhooks/payment',express.raw({type:'*/*',limit:'100kb'}),A(async(q,s)=>{
+  if(!o.paymentsEnabled)return no(s,503,'Payments are disabled');
   if(!Buffer.isBuffer(q.body)||!gw.verify(q.body,q.headers))return s.status(401).end();
   let e;try{e=gw.parse(JSON.parse(q.body.toString('utf8')),q.headers)}catch{return s.status(400).end()}
   if(e&&e.ignore)return s.json({ok:true,ignored:true});
@@ -110,10 +111,10 @@ function createApp(o){
   if(!c){const id=rid();await run('insert into chats values(?,?,?,?) on conflict(a_id,b_id) do nothing',id,to,q.u.id,now());c=await get('select id from chats where a_id=? and b_id=?',to,q.u.id)}
   s.json({chat_id:c.id})}));
  // ---- payments (status read-only for the client)
- app.post('/payments/order',auth(['influencer']),A(async(q,s)=>{if(!ok(q.u))return no(s,403,'Verification pending');if(!rl('order:'+q.u.id,5,36e5))return no(s,429,'Too many orders');
+ app.post('/payments/order',auth(['influencer']),A(async(q,s)=>{if(!o.paymentsEnabled)return no(s,503,'Payments are disabled');if(!ok(q.u))return no(s,403,'Verification pending');if(!rl('order:'+q.u.id,5,36e5))return no(s,429,'Too many orders');
   const id=rid();let od;try{od=await gw.createOrder(o.pricePaise,id)}catch{return no(s,502,'Payment service unavailable')}
   await run("insert into payments values(?,?,?,?,'created',null,?)",id,q.u.id,od.order_id,o.pricePaise,now());s.status(201).json({order_id:od.order_id,amount_paise:o.pricePaise,checkout:gw.checkout()})}));
- app.get('/payments/:oid/status',auth(),A(async(q,s)=>{const p=await get('select status,paid_at from payments where order_id=? and user_id=?',q.params.oid,q.u.id);p?s.json(p):no(s,404,'Not found')}));
+ app.get('/payments/:oid/status',auth(),A(async(q,s)=>{if(!o.paymentsEnabled)return no(s,503,'Payments are disabled');const p=await get('select status,paid_at from payments where order_id=? and user_id=?',q.params.oid,q.u.id);p?s.json(p):no(s,404,'Not found')}));
  // ---- 3. photos & chats: object-level authorization on every request
  app.get('/photos/:id',auth(),A(async(q,s)=>{const p=await get('select * from photos where id=?',q.params.id),u=q.u;
   const can=p&&(p.owner_id===u.id||u.role==='admin'||(p.status==='approved'&&ok(u)&&!await isBlocked(u.id,p.owner_id)));if(!can)return no(s,404,'Not found');

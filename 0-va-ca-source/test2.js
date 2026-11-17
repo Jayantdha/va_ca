@@ -34,6 +34,14 @@ test('app with razorpay-style gateway: order from provider, signed webhook, repl
  assert.equal((await post(cap(49900),'e3')).s,200);assert.equal((await call('GET','/payments/order_PROV1/status',{tok:inf.access})).j.status,'paid');
  assert.equal((await post(cap(49900),'e3')).j.duplicate,true);assert.ok(S.get('select reveal_at from users where id=?',inf.id).reveal_at>T.t);
  const {call:c2,mk:m2}=await boot({gateway:AD.razorpay({keyId:'k',keySecret:'s',webhookSecret:WH,fetchFn:async()=>({ok:false})})});assert.equal((await c2('POST','/payments/order',{tok:m2('influencer').access})).s,502)});
+test('payments can be disabled without accepting fake orders or webhooks',async()=>{
+ const {S,call,mk}=await boot({paymentsEnabled:false,webhookSecret:undefined});
+ const inf=mk('influencer');
+ assert.equal((await call('POST','/payments/order',{tok:inf.access})).s,503);
+ assert.equal((await call('GET','/payments/not-an-order/status',{tok:inf.access})).s,503);
+ assert.equal((await call('POST','/webhooks/payment',{raw:Buffer.from('{}'),ct:'application/json'})).s,503);
+ assert.equal(S.all('select * from payments').length,0);
+});
 test('photo moderation hook: approve, reject, or manual review',async()=>{let v='approve';const {call,mk}=await boot({moderate:async()=>v});const u=mk('influencer');
  assert.equal((await call('POST','/photos',{tok:u.access,raw:await png(),ct:'image/png'})).j.status,'approved');
  v='reject';assert.equal((await call('POST','/photos',{tok:u.access,raw:await png(),ct:'image/png'})).s,422);

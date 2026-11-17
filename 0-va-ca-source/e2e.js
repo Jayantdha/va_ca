@@ -9,7 +9,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));const until=async(f,ms=8000,msg
 let steps=0;const ok=n=>{steps++;console.log('  ✓',n)};
 (async()=>{
  const srv=await new Promise(r=>{const x=S.app.listen(0,()=>r(x))}),API='http://127.0.0.1:'+srv.address().port;
- const mkWin=()=>{const d=new JSDOM(html.replace('window.VA_API=""','window.VA_API="'+API+'"'),{url:'http://front.test/',runScripts:'dangerously',pretendToBeVisual:true,beforeParse(w){w.VA_API=API;w.fetch=fetch;}});return d.window};
+ const mkWin=()=>{const built=html.replace('window.VA_API="";window.VA_RZP="";window.VA_TS="";','window.VA_API="'+API+'";window.VA_RZP="1";window.VA_TS="";');const d=new JSDOM(built,{url:'http://front.test/',runScripts:'dangerously',pretendToBeVisual:true,beforeParse(w){w.VA_API=API;w.VA_RZP='1';w.fetch=fetch;}});return d.window};
  const on=w=>[...w.document.querySelectorAll('.screen.on')].map(x=>x.id).join();
  const signup=async(w,role,name,phone,gst)=>{const $=i=>w.document.getElementById(i);await until(()=>$('cons'),3000,'ui');w.document.querySelector('.rb[data-role='+role+']').click();$('ts').click();
   $('ph').value=phone;$('nm').value=name;if(gst)$('gs').value=gst;$('pw2').value='secret123';$('pc').value='secret123';$('cons').checked=true;
